@@ -92,6 +92,7 @@ public static HashMap<String,JvnRemoteServer> mapObjnJrs;
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
     // to be completed
+	   
     
     
     return null;

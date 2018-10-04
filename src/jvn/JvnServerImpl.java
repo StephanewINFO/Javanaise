@@ -98,9 +98,8 @@ public class JvnServerImpl
 	public  JvnObject jvnCreateObject(Serializable o)
 	throws jvn.JvnException {
             
-            jvnObjectImpl jo= new jvnObjectImpl(o);
+            JvnObject jo= new JvnObjectImpl(o);
             return jo; 
-                
 	}
 	
 	/**
@@ -121,7 +120,7 @@ public class JvnServerImpl
 	}
 	
 	/**
-	* Provide the reference of a JVN object beeing given its symbolic name
+	* Provide the reference of a JVN object being given its symbolic name
 	* @param jon : the JVN object name
 	* @return the JVN object 
 	* @throws JvnException
@@ -159,6 +158,7 @@ public class JvnServerImpl
 	 throws JvnException {
             try {
                 jrc.jvnLockRead(joi, js);
+                
             } catch (RemoteException ex) {
                 Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
             }
