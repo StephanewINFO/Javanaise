@@ -8,12 +8,14 @@
 
 package jvn;
 
+
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import static jvn.JvnServerImpl.mapObject;
 
@@ -23,8 +25,10 @@ public class JvnCoordImpl
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
 	
-public static HashMap<String,JvnObject> mapObjnJo;
-public static HashMap<String,JvnRemoteServer> mapObjnJrs;
+public  HashMap<String,JvnObject> mapObjnJo;
+public  HashMap<String,JvnRemoteServer> mapObjnJs;
+public List<Triplet<Object, Object, Object>> listObjLocalServer;
+//public Triplet <String, Integer, Integer> listObjLocalServer;
 
 
 
@@ -34,7 +38,8 @@ public static HashMap<String,JvnRemoteServer> mapObjnJrs;
   **/
 	private JvnCoordImpl() throws Exception {
              mapObjnJo= new HashMap<>();
-             mapObjnJrs= new HashMap<>();
+             mapObjnJs= new HashMap<>();
+             listObjLocalServer = new ArrayList<>();
 		// to be completed
 	}
 
@@ -59,6 +64,9 @@ public static HashMap<String,JvnRemoteServer> mapObjnJrs;
   **/
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
+      
+         listObjLocalServer.add(new Triplet<>(jon, jo, js));
+      
     // to be completed 
   }
   
@@ -70,14 +78,16 @@ public static HashMap<String,JvnRemoteServer> mapObjnJrs;
   **/
   public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-      for (Map.Entry<String, JvnRemoteServer> entry : mapObjnJrs.entrySet()) {
-                if (entry.getKey().equals(jon)){
-                    
-                    
-                   // return entry.getValue();
-                } 
-            }
       
+   Triplet<Object, Object, Object> ObjJs;
+      
+    for (int i = 0; i < listObjLocalServer.size(); i++) {        
+        ObjJs = listObjLocalServer.get(i);
+        
+        if(ObjJs.getFirst().equals(jon) && ObjJs.getThird().equals(js)){
+            return (JvnObject) ObjJs.getSecond();
+        }
+    }
     // to be completed 
     return null;
   }
@@ -117,7 +127,15 @@ public static HashMap<String,JvnRemoteServer> mapObjnJrs;
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
+           Triplet<Object, Object, Object> ObjJs;
+      
+    for (int i = 0; i < listObjLocalServer.size(); i++) {        
+        ObjJs = listObjLocalServer.get(i);
         
+        if( ObjJs.getThird().equals(js)){
+           listObjLocalServer.remove(ObjJs);
+        }
+    }
 	 // to be completed
     }
     
