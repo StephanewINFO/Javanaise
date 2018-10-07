@@ -17,9 +17,24 @@ public class JvnObjectImpl implements JvnObject{
         
         States etatVerrou;
 	
+	public States getEtatVerrou() {
+			return etatVerrou;
+		}
+
+		public void setEtatVerrou(States etatVerrou) {
+			this.etatVerrou = etatVerrou;
+		}
+
 	public JvnObjectImpl(Serializable obj){
 		this.obj=obj;
-		joi=obj.hashCode();
+		joi=this.hashCode();
+		this.etatVerrou = States.NL;
+//		try {
+//			this.jvnLockWrite();
+//		}catch(Exception e) {
+//			System.err.println(e);
+//			e.printStackTrace();
+//		}
 		
 	}
 	
@@ -33,22 +48,14 @@ public class JvnObjectImpl implements JvnObject{
                       break;
      
                   case RC:
+                	  obj = js.jvnLockRead(joi);
                       etatVerrou = States.R;
                       break;
                   case WC:
                 	  etatVerrou = States.RWC;
                       break;
-                  case W:
-                	  etatVerrou = States.W;
-                	  break;
-                	  
-                  default:
-                	  etatVerrou = States.R;
-                	  break;
-                	  
-                  
-              }
-              System.out.println("jvn.jvnObjectImpl.jvnLockRead()");     
+             
+              }   
               
               
             
@@ -65,9 +72,8 @@ public class JvnObjectImpl implements JvnObject{
 		case WC:
 			etatVerrou = States.W;
 			break;
-			
-		default:
-			obj = js.jvnLockRead(joi);
+		case NL:
+			obj = js.jvnLockWrite(joi);
 			etatVerrou = States.W;
 			break;
 		}
@@ -82,8 +88,10 @@ public class JvnObjectImpl implements JvnObject{
 			break;
 		case W:
 			etatVerrou = States.WC;
+			break;	
 		case RWC:
 			etatVerrou = States.WC;
+			break;
 		default:
 			break;
 		}
@@ -91,8 +99,7 @@ public class JvnObjectImpl implements JvnObject{
 	}
 
 	public int jvnGetObjectId() throws JvnException {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.joi;
 	}
 //completar
 	public Serializable jvnGetObjectState() throws JvnException {
@@ -101,19 +108,64 @@ public class JvnObjectImpl implements JvnObject{
 
 
 	public void jvnInvalidateReader() throws JvnException {
-		etatVerrou = States.NL;
+		
+		switch(this.etatVerrou) {
+		case RC:
+			this.etatVerrou = States.NL;
+			break;
+		case RWC:
+			try {
+				wait();
+				this.etatVerrou = States.NL;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			break;
+}
 	}
 
 	public Serializable jvnInvalidateWriter() throws JvnException {
-		// TODO Auto-generated method stub
-		return null;
+		switch(this.etatVerrou) {
+		case WC:
+			this.etatVerrou = States.NL;
+			break;
+		case W:
+		case RWC:
+			try {
+				wait();
+				this.etatVerrou = States.NL;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			break;
+		}
+		return obj;
 	}
 
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		// TODO Auto-generated method stub
-		return null;
+		switch(this.etatVerrou) {
+		case WC:
+			this.etatVerrou = States.RC;
+			break;
+		case W:
+			try {
+				wait();
+				this.etatVerrou = States.RC;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			break;
+		case RWC:
+			try {
+				wait();
+				this.etatVerrou = States.R;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+			return obj;
+		}
 	}
 
        
-        
-}
+    
