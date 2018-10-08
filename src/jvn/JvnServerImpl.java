@@ -31,32 +31,24 @@ public class JvnServerImpl
 	
   // A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
-        private static JvnRemoteCoord jrc=null;
-        public static HashMap<String,JvnObject> mapObject=new HashMap<>();
+        private JvnRemoteCoord jrc=null;
+        public  HashMap<String,JvnObject> mapObject;
   /**
   * Default constructor
   * @throws JvnException
   **/
 	JvnServerImpl() throws Exception {
 		super();
-      
-                 
+		this.mapObject =new HashMap<>();
+       try {
+                Registry registry = LocateRegistry.getRegistry();
+                jrc = (JvnRemoteCoord) registry.lookup("Coord");
+                System.err.println("ServerLocal connected: " + this.hashCode());
 
-                   try {
-                       Scanner reader = new Scanner(System.in);
-                       String host = reader.next();
-                         //if (sTexto.length() < 1) {
-                            System.out.println("Usage: JServerLocal <rmiregistry host>");
-                            // return;}
-                     
-                            Registry registry = LocateRegistry.getRegistry(host);
-                            jrc = (JvnRemoteCoord) registry.lookup("Coord");
-
-                         } catch (Exception e) {
-                    System.err.println("Error on client: " + e) ;
-}
-		// to be completed
-	
+             } catch (Exception e) {
+			        System.err.println("Error on client JvnServerImpl(): " + e);
+			        e.printStackTrace();
+			}
 }
 	
   /**
@@ -81,6 +73,7 @@ public class JvnServerImpl
 	**/
 	public  void jvnTerminate()
 	throws jvn.JvnException {
+           
             try {
                 jrc.jvnTerminate(js);
                 
@@ -88,6 +81,7 @@ public class JvnServerImpl
             } catch (RemoteException ex) {
                 Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
             }
+       
 	} 
 	
 	/**
@@ -97,11 +91,18 @@ public class JvnServerImpl
 	**/
 	public  JvnObject jvnCreateObject(Serializable o)
 	throws jvn.JvnException {
-            
-            jvnObjectImpl jo= new jvnObjectImpl(o);
+        
+            int joi=0;
+            try {
+                joi = jrc.jvnGetObjectId();
+            } catch (RemoteException ex) {
+                Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            JvnObjectImpl jo=new JvnObjectImpl(joi,o);
             return jo; 
                 
 	}
+
 	
 	/**
 	*  Associate a symbolic name with a JVN object
@@ -174,7 +175,11 @@ public class JvnServerImpl
 	**/
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
-		// to be completed 
+            try {
+                jrc.jvnLockWrite(joi, js);
+            } catch (RemoteException ex) {
+                Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
+            }
 		return null;
 	}	
 
@@ -188,7 +193,30 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-		// to be completed 
+				// to be completed 
+                JvnObjectImpl jo;
+            for (Map.Entry<String, JvnObject> entry : mapObject.entrySet()) {    
+                  jo=(JvnObjectImpl) entry.getValue();
+                   
+                if(jo.jvnGetObjectId()==joi){
+                      
+                      try {
+                          jo.jvnInvalidateReader();
+                          
+                          jo.wait();
+                          
+                          
+                      } catch (InterruptedException ex) {
+                          Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
+                      }
+                       
+                }   
+                
+            }
+                
+		
+	
+	
 	};
 	    
 	/**
@@ -200,8 +228,29 @@ public class JvnServerImpl
   public Serializable jvnInvalidateWriter(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException { 
 		// to be completed 
+                JvnObjectImpl jo;
+            for (Map.Entry<String, JvnObject> entry : mapObject.entrySet()) {    
+                  jo=(JvnObjectImpl) entry.getValue();
+                   
+                if(jo.jvnGetObjectId()==joi){
+                      
+                      try {
+                          jo.jvnInvalidateWriter();
+                          
+                          jo.wait();
+                          
+                          return jo;
+                      } catch (InterruptedException ex) {
+                          Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
+                      }
+                       
+                }   
+                
+            }
+                
 		return null;
-	};
+	
+	}
 	
 	/**
 	* Reduce the Write lock of the JVN object identified by id 
@@ -211,10 +260,32 @@ public class JvnServerImpl
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
 	 throws java.rmi.RemoteException,jvn.JvnException { 
-		// to be completed 
+		// to be completed    
+            JvnObjectImpl jo;
+            for (Map.Entry<String, JvnObject> entry : mapObject.entrySet()) {    
+                  jo=(JvnObjectImpl) entry.getValue();
+                   
+                if(jo.jvnGetObjectId()==joi){
+                      
+                      try {
+                          jo.jvnInvalidateWriterForReader();
+                          
+                          jo.wait();
+                          
+                          return jo;
+                      } catch (InterruptedException ex) {
+                          Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
+                      }
+                       
+                }   
+                
+            }
+                
 		return null;
-	 };
+	
 
 }
 
  
+
+}

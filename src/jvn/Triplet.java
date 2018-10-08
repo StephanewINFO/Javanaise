@@ -5,23 +5,41 @@
  */
 package jvn;
 
-/**
- *
- * @author stephanie
- */
-public class Triplet<T, U, V> {
+public class Triplet {
 
-    private final T first;
-    private final U second;
-    private final V third;
+    private String name;
+    private JvnObject jvnObject;
+    private JvnRemoteServer jvnRemoteServer;
 
-    public Triplet(T first, U second, V third) {
-        this.first = first;
-        this.second = second;
-        this.third = third;
+    public Triplet(String jon, JvnObject jo, JvnRemoteServer js) {
+        this.name = jon;
+        this.jvnObject = jo;
+        this.jvnRemoteServer = js;
     }
 
-    public T getFirst() { return first; }
-    public U getSecond() { return second; }
-    public V getThird() { return third; }
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public JvnObject getJvnObject() {
+		return jvnObject;
+	}
+
+	public void setJvnObject(JvnObject jvnObject) {
+		this.jvnObject = jvnObject;
+	}
+
+	public JvnRemoteServer getJvnRemoteServer() {
+		return jvnRemoteServer;
+	}
+
+	public void setJvnRemoteServer(JvnRemoteServer jvnRemoteServer) {
+		this.jvnRemoteServer = jvnRemoteServer;
+	}
+
+    
 }
