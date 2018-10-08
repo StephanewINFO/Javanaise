@@ -133,8 +133,14 @@ private Triplet writer;
 			   if(triplet.getJvnObject().jvnGetObjectId() == joi && triplet.getJvnRemoteServer().equals(js)) {
 				   if(this.writer == null) {
 					   result = triplet.getJvnObject().jvnGetObjectState();
+					   if(!this.reader.isEmpty()) {
+						   for(Triplet t:this.reader) {
+							   t.getJvnRemoteServer().jvnInvalidateReader(t.getJvnObject().jvnGetObjectId());
+							   this.reader.remove(t);
+						   }
+					   }
 				   }else {
-					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriterForReader(this.writer.getJvnObject().jvnGetObjectId());
+					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriter(this.writer.getJvnObject().jvnGetObjectId());
 				   }
 				   this.writer = triplet;
 				   

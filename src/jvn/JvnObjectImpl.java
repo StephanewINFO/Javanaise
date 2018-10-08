@@ -28,7 +28,7 @@ public class JvnObjectImpl implements JvnObject{
 	public JvnObjectImpl(Serializable obj){
 		this.obj=obj;
 		joi=this.hashCode();
-		this.etatVerrou = States.NL;
+		this.etatVerrou = States.W;
 //		try {
 //			this.jvnLockWrite();
 //		}catch(Exception e) {
@@ -95,6 +95,7 @@ public class JvnObjectImpl implements JvnObject{
 		default:
 			break;
 		}
+		//notify();
 		
 	}
 
