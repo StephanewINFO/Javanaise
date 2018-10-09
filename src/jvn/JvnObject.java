@@ -78,6 +78,8 @@ public interface JvnObject extends Serializable {
 	**/
    public Serializable jvnInvalidateWriterForReader()
 	 throws jvn.JvnException;	
-   
-   
+
+    public void setEtatVerrou(JvnObjectImpl.States states);
+
+    public Object getEtatVerrou();
 }

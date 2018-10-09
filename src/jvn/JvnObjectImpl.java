@@ -17,17 +17,26 @@ public class JvnObjectImpl implements JvnObject{
         
         States etatVerrou;
 	
+	public States getEtatVerrou() {
+			return etatVerrou;
+		}
+
+		public void setEtatVerrou(States etatVerrou) {
+			this.etatVerrou = etatVerrou;
+		}
+
 	public JvnObjectImpl(int joi,Serializable obj){
 		this.obj=obj;
 		this.joi=joi;
 		
+//		try {
+//			this.jvnLockWrite();
+//		}catch(Exception e) {
+//			System.err.println(e);
+//			e.printStackTrace();
+//		}
+		
 	}
-
-
-
-    public void setEtatVerrou(States etatVerrou) {
-        this.etatVerrou = etatVerrou;
-    }
 	
 	public void jvnLockRead() throws JvnException {
               JvnServerImpl js = JvnServerImpl.jvnGetServer();
@@ -39,14 +48,14 @@ public class JvnObjectImpl implements JvnObject{
                       break;
      
                   case RC:
+                	  obj = js.jvnLockRead(joi);
                       etatVerrou = States.R;
                       break;
                   case WC:
                 	  etatVerrou = States.RWC;
                       break;
-                  
-              }
-              System.out.println("jvn.jvnObjectImpl.jvnLockRead()");     
+             
+              }   
               
               
             
@@ -60,12 +69,10 @@ public class JvnObjectImpl implements JvnObject{
 	public void jvnLockWrite() throws JvnException {
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();
 		switch(etatVerrou) {
-               
 		case WC:
 			etatVerrou = States.W;
 			break;
-			
-		default:
+		case NL:
 			obj = js.jvnLockWrite(joi);
 			etatVerrou = States.W;
 			break;
@@ -75,49 +82,40 @@ public class JvnObjectImpl implements JvnObject{
 
 	public void jvnUnLock() throws JvnException {
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();
-                if(etatVerrou == null){
-                    etatVerrou = States.NL;
+                if(etatVerrou==null){
+                    etatVerrou= States.NL;
                 }else{
-                    
                 
 		switch(etatVerrou) {
 		case R:
 			etatVerrou = States.RC;
-                        notify();
 			break;
 		case W:
 			etatVerrou = States.WC;
-                        notify();
-                        break;
+			break;	
 		case RWC:
 			etatVerrou = States.WC;
-                        break;
+			break;
 		default:
-			etatVerrou = States.NL;
-                        System.out.println("blabla");
+			break;
 		}
+		//notify();
                 }
 	}
 
 	public int jvnGetObjectId() throws JvnException {
-		// TODO Auto-generated method stub
 		return this.joi;
 	}
-//No implementado
+//completar
 	public Serializable jvnGetObjectState() throws JvnException {
 		return this.obj;
 	}
-
-    public States getEtatVerrou() {
-        return etatVerrou;
-    }
 
 
 	public void jvnInvalidateReader() throws JvnException {
 		
 		switch(this.etatVerrou) {
 		case RC:
-                  
 			this.etatVerrou = States.NL;
 			break;
 		case RWC:
@@ -172,7 +170,7 @@ public class JvnObjectImpl implements JvnObject{
 		}
 			return obj;
 		}
+	}
 
        
-        
-}
+    
