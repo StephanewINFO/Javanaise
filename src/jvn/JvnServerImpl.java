@@ -138,6 +138,7 @@ public class JvnServerImpl
             }
             try {
                 return jrc.jvnLookupObject(jon, js);
+                
             } catch (RemoteException ex) {
                 Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -200,15 +201,9 @@ public class JvnServerImpl
                    
                 if(jo.jvnGetObjectId()==joi){
                       
-                      try {
+                    
                           jo.jvnInvalidateReader();
-                          
-                          jo.wait();
-                          
-                          
-                      } catch (InterruptedException ex) {
-                          Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
-                      }
+  
                        
                 }   
                 

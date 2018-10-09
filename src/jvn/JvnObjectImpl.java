@@ -44,14 +44,6 @@ public class JvnObjectImpl implements JvnObject{
                   case WC:
                 	  etatVerrou = States.RWC;
                       break;
-           /*     case W:
-                	  etatVerrou = States.W;
-                	  break;
-     /*           	  
-                  default:
-                	  etatVerrou = States.R;
-                	  break;
-                	 */ 
                   
               }
               System.out.println("jvn.jvnObjectImpl.jvnLockRead()");     
@@ -68,9 +60,7 @@ public class JvnObjectImpl implements JvnObject{
 	public void jvnLockWrite() throws JvnException {
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();
 		switch(etatVerrou) {
-                    
-
-                        
+               
 		case WC:
 			etatVerrou = States.W;
 			break;
@@ -88,11 +78,15 @@ public class JvnObjectImpl implements JvnObject{
 		switch(etatVerrou) {
 		case R:
 			etatVerrou = States.RC;
+                        notify();
 			break;
 		case W:
 			etatVerrou = States.WC;
+                        notify();
+                        break;
 		case RWC:
 			etatVerrou = States.WC;
+                        break;
 		default:
 			etatVerrou = States.NL;
 		}
@@ -117,6 +111,7 @@ public class JvnObjectImpl implements JvnObject{
 		
 		switch(this.etatVerrou) {
 		case RC:
+                  
 			this.etatVerrou = States.NL;
 			break;
 		case RWC:

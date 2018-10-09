@@ -105,37 +105,32 @@ public List<Triplet> listObjLocalServer;
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
     // to be completed
-    Triplet ObjJs;
-       JvnObjectImpl jo;
-       JvnRemoteServer jsRemote;
-      
-    for (int i = 0; i < listObjLocalServer.size(); i++) {        
-        ObjJs = listObjLocalServer.get(i);
-        jo=(JvnObjectImpl) ObjJs.getJvnObject();
-        jsRemote= ObjJs.getJvnRemoteServer();
+        JvnObjectImpl jo;
         
-        if(jo.jvnGetObjectId()==joi && jsRemote.equals(js)){
-            //cambio en el coord
+    for (Triplet triplet : listObjLocalServer) {        
+         jo=(JvnObjectImpl)triplet.getJvnObject().jvnGetObjectState();
+      
+         //case 2
+        if(triplet.getJvnObject().jvnGetObjectId()==joi && triplet.getJvnRemoteServer().equals(js)){
+            //change d'etat dans le coord
             jo.setEtatVerrou(JvnObjectImpl.States.R);
             return jo;
         }
         //case 3
-        if ((jo.jvnGetObjectId()==joi) && !(jsRemote.equals(js))){
+        if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
             if (jo.getEtatVerrou().equals(States.R)) {
                 listObjLocalServer.add(new Triplet("IRC", jo, js));
                 return jo;
             }
         }
-        
-        if ((jo.jvnGetObjectId()==joi) && !(ObjJs.getJvnRemoteServer().equals(js))){
+        //case 6
+        if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
             if (jo.getEtatVerrou().equals(States.W)) {
-                
-            // retorna el objeto
-              jsRemote.jvnInvalidateWriterForReader(joi);
-              
-              
+
+              triplet.getJvnRemoteServer().jvnInvalidateWriterForReader(joi);
+              //change d'etat dans le coord
               jo.setEtatVerrou(JvnObjectImpl.States.R);
-              
+              //add le nouveau Server Local qui lit l'object
               listObjLocalServer.add(new Triplet("IRC", jo, js));
               return jo;
             
@@ -156,37 +151,30 @@ public List<Triplet> listObjLocalServer;
 
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-       Triplet ObjJs;
-       JvnObjectImpl jo;
-       JvnRemoteServer jsRemote;
-      
-    for (int i = 0; i < listObjLocalServer.size(); i++) {        
-        ObjJs = listObjLocalServer.get(i);
-        jo=(JvnObjectImpl) ObjJs.getJvnObject();
-        jsRemote= ObjJs.getJvnRemoteServer();        
+        JvnObjectImpl jo;
         
+    for (Triplet triplet : listObjLocalServer) {        
+         jo=(JvnObjectImpl)triplet.getJvnObject().jvnGetObjectState();
         
-        if ((jo.jvnGetObjectId()==joi) && !(jsRemote.equals(js))){
+        //case 7
+if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
             if (jo.getEtatVerrou().equals(States.W)) {
-            jsRemote.jvnInvalidateWriter(joi);
-            listObjLocalServer.add(new Triplet("IRC", jo, js));
+            triplet.getJvnRemoteServer().jvnInvalidateWriter(joi);
+            //change le nouveau server local qui va ecrire
+            triplet.setJvnRemoteServer(js);
             return jo;     
             }
         }
-            
-        if ((jo.jvnGetObjectId()==joi) && !(jsRemote.equals(js))){
+            //case 8
+if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
             if (jo.getEtatVerrou().equals(States.R)) {
-            jsRemote.jvnInvalidateReader(joi);
+            triplet.getJvnRemoteServer().jvnInvalidateReader(joi);
             jo.setEtatVerrou(States.W);
-            listObjLocalServer.add(new Triplet("IRC", jo, js));
+            //change le nouveau server local qui va ecrire
+            triplet.setJvnRemoteServer(js);
             return jo;     
             }   
-            
-      
-            
-            
-            
-            }
+ }
         }
     // to be completed
     return null;
@@ -201,15 +189,13 @@ public List<Triplet> listObjLocalServer;
 	 throws java.rmi.RemoteException, JvnException {
            Triplet ObjJs;
       
-    for (int i = 0; i < listObjLocalServer.size(); i++) {        
-        ObjJs = listObjLocalServer.get(i);
-        
-        if( ObjJs.getJvnRemoteServer().equals(js)){
-           listObjLocalServer.remove(ObjJs);
+    for (Triplet triplet : listObjLocalServer)
+        if(triplet.getJvnRemoteServer().equals(js)){
+           listObjLocalServer.remove(triplet);
         }
     }
 	 // to be completed
-    }
+    
     
     
     public static void main(String[] args) {
