@@ -41,8 +41,10 @@ public class JvnServerImpl
 		super();
 		this.mapObject =new HashMap<>();
        try {
-                Registry registry = LocateRegistry.getRegistry();
+           
+                Registry registry = LocateRegistry.getRegistry("localhost", 30000);
                 jrc = (JvnRemoteCoord) registry.lookup("Coord");
+                
                 System.err.println("ServerLocal connected: " + this.hashCode());
 
              } catch (Exception e) {

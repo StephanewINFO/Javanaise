@@ -202,8 +202,8 @@ if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServ
     	JvnRemoteCoord h_stub;
 		try {
 			h_stub = new JvnCoordImpl();
-			//Registry registry = LocateRegistry.createRegistry(2500);
-                        Registry registry= LocateRegistry.getRegistry();
+			//Registry registry = LocateRegistry.createRegistry(28999);
+                        Registry registry= LocateRegistry.getRegistry(30000);
 			 registry.bind("Coord", h_stub);
 			 System.out.println ("Server ready");
 		} catch (Exception e)  {

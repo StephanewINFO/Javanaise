@@ -75,6 +75,11 @@ public class JvnObjectImpl implements JvnObject{
 
 	public void jvnUnLock() throws JvnException {
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();
+                if(etatVerrou == null){
+                    etatVerrou = States.NL;
+                }else{
+                    
+                
 		switch(etatVerrou) {
 		case R:
 			etatVerrou = States.RC;
@@ -89,8 +94,9 @@ public class JvnObjectImpl implements JvnObject{
                         break;
 		default:
 			etatVerrou = States.NL;
+                        System.out.println("blabla");
 		}
-		
+                }
 	}
 
 	public int jvnGetObjectId() throws JvnException {

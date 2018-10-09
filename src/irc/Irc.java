@@ -42,9 +42,13 @@ public class Irc {
 		if (jo == null) {
 			jo = js.jvnCreateObject((Serializable) new Sentence());
 			// after creation, I have a write lock on the object
+                        System.out.println("test");
 			jo.jvnUnLock();
+                        System.out.println("test1");
 			js.jvnRegisterObject("IRC", jo);
+                        System.out.println("test2");
 		}
+                
 		// create the graphical part of the Chat application
 		 new Irc(jo);
 	   
