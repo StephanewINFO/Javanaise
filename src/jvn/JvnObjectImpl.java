@@ -7,7 +7,6 @@ import irc.Sentence;
 
 public class JvnObjectImpl implements JvnObject{
 
-        
 	public Serializable obj;
 	public int joi;
 	enum States 
@@ -16,39 +15,22 @@ public class JvnObjectImpl implements JvnObject{
 	}
         
         States etatVerrou;
-	
-	public States getEtatVerrou() {
-			return etatVerrou;
-		}
 
-		public void setEtatVerrou(States etatVerrou) {
-			this.etatVerrou = etatVerrou;
-		}
-
-	public JvnObjectImpl(Serializable obj){
-		this.obj=obj;
-		joi=this.hashCode();
-		this.etatVerrou = States.W;
-//		try {
-//			this.jvnLockWrite();
-//		}catch(Exception e) {
-//			System.err.println(e);
-//			e.printStackTrace();
-//		}
-		
+	public JvnObjectImpl(int id, Serializable obj){
+		this.obj = obj;
+		this.joi = id;
+		this.etatVerrou = States.NL;
 	}
 	
 	public void jvnLockRead() throws JvnException {
-              JvnServerImpl js = JvnServerImpl.jvnGetServer();
-              
+             
               switch(etatVerrou){
                   case NL:
-                	  obj = js.jvnLockRead(joi);    
+                	  obj = JvnServerImpl.jvnGetServer().jvnLockRead(joi);    
                 	  etatVerrou = States.R;
                       break;
      
                   case RC:
-                	  obj = js.jvnLockRead(joi);
                       etatVerrou = States.R;
                       break;
                   case WC:
@@ -56,32 +38,31 @@ public class JvnObjectImpl implements JvnObject{
                       break;
              
               }   
-              
-              
-            
-                   
             
         }
-		// TODO Auto-generated method stub
 		
 	
 
 	public void jvnLockWrite() throws JvnException {
-		JvnServerImpl js = JvnServerImpl.jvnGetServer();
-		switch(etatVerrou) {
-		case WC:
-			etatVerrou = States.W;
-			break;
-		case NL:
-			obj = js.jvnLockWrite(joi);
-			etatVerrou = States.W;
-			break;
-		}
+		
+			switch(etatVerrou) {
+			case WC:
+				etatVerrou = States.W;
+				break;
+			case NL:
+				obj = JvnServerImpl.jvnGetServer().jvnLockWrite(joi);
+				etatVerrou = States.W;
+				break;
+			case RC:
+				obj = JvnServerImpl.jvnGetServer().jvnLockWrite(joi);
+				etatVerrou = States.W;
+				break;
+			}
+		
 		
 	}
 
 	public void jvnUnLock() throws JvnException {
-		JvnServerImpl js = JvnServerImpl.jvnGetServer();
 		switch(etatVerrou) {
 		case R:
 			etatVerrou = States.RC;
@@ -95,77 +76,68 @@ public class JvnObjectImpl implements JvnObject{
 		default:
 			break;
 		}
-		//notify();
 		
 	}
 
 	public int jvnGetObjectId() throws JvnException {
-		return this.joi;
+		return joi;
 	}
-//completar
+
 	public Serializable jvnGetObjectState() throws JvnException {
-		return this.obj;
+		return obj;
 	}
 
 
 	public void jvnInvalidateReader() throws JvnException {
 		
-		switch(this.etatVerrou) {
+		switch(etatVerrou) {
 		case RC:
-			this.etatVerrou = States.NL;
+			etatVerrou = States.NL;
 			break;
 		case RWC:
-			try {
-				wait();
-				this.etatVerrou = States.NL;
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			etatVerrou = States.NL;
 			break;
-}
+		case WC:
+			etatVerrou = States.NL;
+			break;
+		case R:
+			etatVerrou = States.NL;
+			break;
+			
+		}
+		
 	}
 
 	public Serializable jvnInvalidateWriter() throws JvnException {
-		switch(this.etatVerrou) {
+		switch(etatVerrou) {
 		case WC:
-			this.etatVerrou = States.NL;
+			etatVerrou = States.NL;
 			break;
-		case W:
+		case RC:
+			etatVerrou = States.NL;
+			break;
 		case RWC:
-			try {
-				wait();
-				this.etatVerrou = States.NL;
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			etatVerrou = States.NL;
 			break;
 		}
 		return obj;
 	}
 
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		switch(this.etatVerrou) {
+		switch(etatVerrou) {
 		case WC:
-			this.etatVerrou = States.RC;
+			etatVerrou = States.RC;
 			break;
 		case W:
-			try {
-				wait();
-				this.etatVerrou = States.RC;
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			etatVerrou = States.RC;
 			break;
 		case RWC:
-			try {
-				wait();
-				this.etatVerrou = States.R;
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			etatVerrou = States.R;
+			break;
 		}
-			return obj;
+		return obj;
 		}
+		
 	}
 
        

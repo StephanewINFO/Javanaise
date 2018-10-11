@@ -13,24 +13,20 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-
-import jvn.JvnObjectImpl.States;
 
 
 
 public class JvnCoordImpl 	
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
-	
-private ArrayList<Triplet> listObjLocalServer;
-private HashSet<Triplet> reader;
-private Triplet writer;
-//public Triplet <String, Integer, Integer> listObjLocalServer;
+	private int id;
+	private HashMap<String, HashSet<JvnObject>> objectNames;
+	private HashMap<Integer, JvnRemoteServer> jvnObjects;
+	private HashMap<Integer, JvnRemoteServer> readers;
+	private HashMap<Integer, JvnRemoteServer> writer;
+	private Serializable objectUpdate;
 
 
 
@@ -39,9 +35,11 @@ private Triplet writer;
   * @throws JvnException
   **/
 	private JvnCoordImpl() throws Exception {
-             this.listObjLocalServer = new ArrayList<>();
-             this.writer = null;
-             this.reader = new HashSet<Triplet>();
+		objectNames = new HashMap<String, HashSet<JvnObject>>();
+		jvnObjects = new HashMap<Integer, JvnRemoteServer>();
+		readers = new HashMap<Integer, JvnRemoteServer>();
+		writer = new HashMap<Integer, JvnRemoteServer>();
+		objectUpdate = null;
 	}
 
   /**
@@ -51,8 +49,7 @@ private Triplet writer;
   **/
   public int jvnGetObjectId()
   throws java.rmi.RemoteException,jvn.JvnException {
-    // to be completed 
-    return 0;
+    return id++;
   }
   
   /**
@@ -65,8 +62,14 @@ private Triplet writer;
   **/
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-      Triplet t = new Triplet(jon, jo, js);
-      this.listObjLocalServer.add(t);
+	  if(objectNames.containsKey(jon)) {
+		  HashSet<JvnObject> objs = objectNames.get(jon);
+		  if(objs == null) {
+			  objs = new HashSet<JvnObject>();
+		  }
+		  objs.add(jo);
+	  }
+      jvnObjects.put(jo.jvnGetObjectId(), js);
   }
   
   /**
@@ -79,12 +82,19 @@ private Triplet writer;
   throws java.rmi.RemoteException,jvn.JvnException{
 	  
 	  JvnObject object = null;
-	   for(Triplet t:this.listObjLocalServer) {
-		   if(t.getName().equals(jon) && t.getJvnRemoteServer().equals(js)) {
-			   object = t.getJvnObject();
-		   }
-	   }
-	    return object;
+	  
+	  if(!objectNames.isEmpty()) {
+		  if(objectNames.containsKey(jon)) {
+			  for(JvnObject o:objectNames.get(jon)) {
+				  for(int id:jvnObjects.keySet()) {
+					  if(jvnObjects.get(id) == js) {
+						  object = o;
+					  }
+				  }
+			  }
+		  }
+	  }
+	  return object;
   }
   
   /**
@@ -97,25 +107,27 @@ private Triplet writer;
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
    
-	   Serializable result = null;
-	   for (Triplet triplet : listObjLocalServer) {
-		   try {
-			   if(triplet.getJvnObject().jvnGetObjectId() == joi && triplet.getJvnRemoteServer().equals(js)) {
-				   if(this.writer == null) {
-					   result = triplet.getJvnObject().jvnGetObjectState();
-				   }else {
-					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriterForReader(this.writer.getJvnObject().jvnGetObjectId());
-					   this.reader.add(this.writer);
-				   }
-				   this.reader.add(triplet);
+	   System.out.println(joi + " do jvnLockReaad");
+	   try {
+		   if(!writer.isEmpty()) {
+			   int writerId = 0;
+			   JvnRemoteServer writerJvnServer = null;
+			   for(int id:writer.keySet()) {
+				   writerId = id;
+				   writerJvnServer = writer.get(id);
 			   }
-		   }catch(Exception e) {
-			   System.err.println("Error on server at jvnLockRead():" + e) ;
-				e.printStackTrace();
+			   objectUpdate = writerJvnServer.jvnInvalidateWriterForReader(writerId);
+			   writer.clear();
+			   readers.put(writerId, writerJvnServer);
 		   }
+		   readers.put(joi, js);
+	   }catch(Exception e) {
+		   System.err.println("Error on coordinator at jvnLockRead():" + e) ;
+			e.printStackTrace();
 	   }
-    
-    return result;
+	   System.out.println("writer :" + writer.toString());
+	   System.out.println("readers :" + readers.toString());
+	   return objectUpdate;
    }
 
   /**
@@ -127,31 +139,35 @@ private Triplet writer;
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-	   Serializable result = null;
-	   for (Triplet triplet : listObjLocalServer) {
-		   try {
-			   if(triplet.getJvnObject().jvnGetObjectId() == joi && triplet.getJvnRemoteServer().equals(js)) {
-				   if(this.writer == null) {
-					   result = triplet.getJvnObject().jvnGetObjectState();
-					   if(!this.reader.isEmpty()) {
-						   for(Triplet t:this.reader) {
-							   t.getJvnRemoteServer().jvnInvalidateReader(t.getJvnObject().jvnGetObjectId());
-							   this.reader.remove(t);
-						   }
-					   }
-				   }else {
-					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriter(this.writer.getJvnObject().jvnGetObjectId());
-				   }
-				   this.writer = triplet;
-				   
+	   System.out.println(joi + " do jvnLockWrite");
+	   try {
+		   if(!writer.isEmpty()) {
+			   int writerId = 0;
+			   JvnRemoteServer writerJvnServer = null;
+			   for(int id:writer.keySet()) {
+				   writerId = id;
+				   writerJvnServer = writer.get(id);
 			   }
-		   }catch(Exception e) {
-			   System.err.println("Error on server at jvnLockRead():" + e) ;
-				e.printStackTrace();
+			   objectUpdate = writerJvnServer.jvnInvalidateWriter(writerId);
+			   writer.clear();
 		   }
+		   if(writer.isEmpty() && !readers.isEmpty()) {
+			   JvnRemoteServer readerJvnServer = null;
+			   for(int id:readers.keySet()) {
+				   readerJvnServer = readers.get(id);
+				   readerJvnServer.jvnInvalidateReader(id);
+			   }
+			   readers.clear();
+		   }
+		   writer.put(joi, js);
+		   
+	   }catch(Exception e) {
+		   System.err.println("Error on server at jvnLockWrite():" + e) ;
+			e.printStackTrace();
 	   }
-    
-    return result;
+//	   System.out.println("writer :" + writer.toString());
+//	   System.out.println("readers :" + readers.toString());
+    return objectUpdate;
    }
 
 	/**
@@ -161,11 +177,7 @@ private Triplet writer;
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-    	for(Triplet t:this.listObjLocalServer) {
-    		if(t.getJvnRemoteServer().equals(js)) {
-    			this.listObjLocalServer.remove(t);
-    		}
-    	}
+    	
     }
     
     
