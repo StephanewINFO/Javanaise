@@ -62,7 +62,7 @@ public class JvnObjectImpl implements JvnObject{
 		
 	}
 
-	public void jvnUnLock() throws JvnException {
+	public synchronized void jvnUnLock() throws JvnException {
 		switch(etatVerrou) {
 		case R:
 			etatVerrou = States.RC;
@@ -74,6 +74,7 @@ public class JvnObjectImpl implements JvnObject{
 			etatVerrou = States.WC;
 			break;
 		default:
+                    notify();
 			break;
 		}
 		
@@ -87,12 +88,18 @@ public class JvnObjectImpl implements JvnObject{
 		return obj;
 	}
 
-
-	public void jvnInvalidateReader() throws JvnException {
+	public synchronized void jvnInvalidateReader() throws JvnException {
 		
 		switch(etatVerrou) {
 		case RC:
 			etatVerrou = States.NL;
+                {
+                    try {
+                        wait();
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
 			break;
 		case RWC:
 			etatVerrou = States.NL;
@@ -108,34 +115,46 @@ public class JvnObjectImpl implements JvnObject{
 		
 	}
 
-	public Serializable jvnInvalidateWriter() throws JvnException {
-		switch(etatVerrou) {
-		case WC:
-			etatVerrou = States.NL;
-			break;
-		case RC:
-			etatVerrou = States.NL;
-			break;
-		case RWC:
-			etatVerrou = States.NL;
-			break;
-		}
-		return obj;
+	public synchronized Serializable jvnInvalidateWriter() throws JvnException {
+            try {
+                switch(etatVerrou) {
+                    case WC:
+                        etatVerrou = States.NL;
+                        wait();
+                        break;
+                    case RC:
+                        etatVerrou = States.NL;
+                        break;
+                    case RWC:
+                        etatVerrou = States.NL;
+                        break;
+                }
+                
+            } catch (InterruptedException ex) {
+                Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return obj;
 	}
 
-	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		switch(etatVerrou) {
-		case WC:
-			etatVerrou = States.RC;
-			break;
-		case W:
-			etatVerrou = States.RC;
-			break;
-		case RWC:
-			etatVerrou = States.R;
-			break;
-		}
-		return obj;
+	public synchronized Serializable jvnInvalidateWriterForReader() throws JvnException {
+            try {
+                switch(etatVerrou) {
+                    case WC:
+                        etatVerrou = States.RC;
+                        wait();
+                        break;
+                    case W:
+                        etatVerrou = States.RC;
+                        break;
+                    case RWC:
+                        etatVerrou = States.R;
+                        break;
+                }
+              
+            } catch (InterruptedException ex) {
+                Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return obj;
 		}
 		
 	}
