@@ -96,8 +96,8 @@ public class JvnObjectImpl implements JvnObject{
                 {
                     try {
                         wait();
-                    } catch (InterruptedException ex) {
-                        Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch(InterruptedException ex) {
+                        System.out.println("jvn.JvnObjectImpl.jvnInvalidateReader()");
                     }
                 }
 			break;
@@ -131,7 +131,7 @@ public class JvnObjectImpl implements JvnObject{
                 }
                 
             } catch (InterruptedException ex) {
-                Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("jvn.JvnObjectImpl.jvnInvalidateWriter()");
             }
             return obj;
 	}
@@ -152,7 +152,7 @@ public class JvnObjectImpl implements JvnObject{
                 }
               
             } catch (InterruptedException ex) {
-                Logger.getLogger(JvnObjectImpl.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("jvn.JvnObjectImpl.jvnInvalidateWriterForReader()");
             }
             return obj;
 		}
