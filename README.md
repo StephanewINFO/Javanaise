@@ -41,6 +41,6 @@ Terminal N (nb de Serveurs Locaux souhaités)
 
 ## Auteurs
 
-* **Thaqif Kip **
+* **Thaqif Kip**
 * **Stephanie Barona Andrade**
 
