@@ -9,8 +9,8 @@ On a utilisé Java RMI pour implementer les méthodes de connection entre les Se
 
 Terminal 1
 Compilation des fichiers .java dans le dossier avec les sources (javac *.java)
->/src$  javac irc/*.java
->/src$  javac jvn/*.java
+/src$  javac irc/*.java
+/src$  javac jvn/*.java
 rmiregistry
 
 ## Exécution 
@@ -41,5 +41,6 @@ Terminal N (nb de Serveurs Locaux souhaités)
 
 ## Auteurs
 
+* **Thaqif Kip **
 * **Stephanie Barona Andrade**
-* **Dumitru Corini**
+
