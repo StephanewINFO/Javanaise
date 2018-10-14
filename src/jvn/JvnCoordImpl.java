@@ -13,24 +13,20 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-
-import jvn.JvnObjectImpl.States;
 
 
 
 public class JvnCoordImpl 	
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
-	
-private ArrayList<Triplet> listObjLocalServer;
-private HashSet<Triplet> reader;
-private Triplet writer;
-
+	private int id;
+	private HashMap<String, HashSet<JvnObject>> objectNames;
+	private HashMap<Integer, JvnRemoteServer> jvnObjects;
+	private HashMap<Integer, JvnRemoteServer> readers;
+	private HashMap<Integer, JvnRemoteServer> writer;
+	private Serializable objectUpdate;
 
 
 
@@ -39,9 +35,11 @@ private Triplet writer;
   * @throws JvnException
   **/
 	private JvnCoordImpl() throws Exception {
-             this.listObjLocalServer = new ArrayList<>();
-             this.writer = null;
-             this.reader = new HashSet<Triplet>();
+		objectNames = new HashMap<String, HashSet<JvnObject>>();
+		jvnObjects = new HashMap<Integer, JvnRemoteServer>();
+		readers = new HashMap<Integer, JvnRemoteServer>();
+		writer = new HashMap<Integer, JvnRemoteServer>();
+		objectUpdate = null;
 	}
 
   /**
@@ -51,10 +49,7 @@ private Triplet writer;
   **/
   public int jvnGetObjectId()
   throws java.rmi.RemoteException,jvn.JvnException {
-      int joi=0;
-      joi++;
-    // to be compl
-    return joi;
+    return id++;
   }
   
   /**
@@ -67,14 +62,15 @@ private Triplet writer;
   **/
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-      Triplet t = new Triplet(jon, jo, js);
-      this.listObjLocalServer.add(t);
-      
+	  if(objectNames.containsKey(jon)) {
+		  HashSet<JvnObject> objs = objectNames.get(jon);
+		  if(objs == null) {
+			  objs = new HashSet<JvnObject>();
+		  }
+		  objs.add(jo);
+	  }
+      jvnObjects.put(jo.jvnGetObjectId(), js);
   }
-
-    public ArrayList<Triplet> getListObjLocalServer() {
-        return listObjLocalServer;
-    }
   
   /**
   * Get the reference of a JVN object managed by a given JVN server 
@@ -86,12 +82,19 @@ private Triplet writer;
   throws java.rmi.RemoteException,jvn.JvnException{
 	  
 	  JvnObject object = null;
-	   for(Triplet t:this.listObjLocalServer) {
-		   if(t.getName().equals(jon) && t.getJvnRemoteServer().equals(js)) {
-			   object = t.getJvnObject();
-		   }
-	   }
-	    return object;
+	  
+	  if(!objectNames.isEmpty()) {
+		  if(objectNames.containsKey(jon)) {
+			  for(JvnObject o:objectNames.get(jon)) {
+				  for(int id:jvnObjects.keySet()) {
+					  if(jvnObjects.get(id) == js) {
+						  object = o;
+					  }
+				  }
+			  }
+		  }
+	  }
+	  return object;
   }
   
   /**
@@ -104,67 +107,29 @@ private Triplet writer;
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
    
-       Serializable result=null;
-       for(Triplet triplet : listObjLocalServer){
-           result = triplet.getJvnObject().jvnGetObjectState();
-           
-           //case2
-           if(triplet.getJvnObject().jvnGetObjectId()==joi && triplet.getJvnRemoteServer().equals(js)){
-            //change d'etat dans le coord
-          triplet.getJvnObject().setEtatVerrou(JvnObjectImpl.States.R);
-            return result;
-        }
-           //case3
-         if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
-         if (triplet.getJvnObject().getEtatVerrou().equals(States.R)) {
-                listObjLocalServer.add(new Triplet("IRC", triplet.getJvnObject(), js));
-                return result;
-            }
-        }
-         
-         //case 6
-        if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
-          if (triplet.getJvnObject().getEtatVerrou().equals(States.W)) {
-
-              triplet.getJvnRemoteServer().jvnInvalidateWriterForReader(joi);
-            // change d'etat dans le coord
-              triplet.getJvnObject().setEtatVerrou(JvnObjectImpl.States.R);
-              //add le nouveau Server Local qui lit l'object
-            listObjLocalServer.add(new Triplet("IRC", triplet.getJvnObject(), js));
-              return result;
-            
-            }
-            
-        }
-   }
-    return null;
-    
-   }
-       
-       
-       /*
-	   Serializable result = null;
-	   for (Triplet triplet : listObjLocalServer) {
-		   try {
-			   if(triplet.getJvnObject().jvnGetObjectId() == joi && triplet.getJvnRemoteServer().equals(js)) {
-				   if(this.writer == null) {
-					   result = triplet.getJvnObject().jvnGetObjectState();
-				   }else {
-					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriterForReader(this.writer.getJvnObject().jvnGetObjectId());
-					   this.reader.add(this.writer);
-				   }
-				   this.reader.add(triplet);
+	   System.out.println(joi + " do jvnLockReaad");
+	   try {
+		   if(!writer.isEmpty()) {
+			   int writerId = 0;
+			   JvnRemoteServer writerJvnServer = null;
+			   for(int id:writer.keySet()) {
+				   writerId = id;
+				   writerJvnServer = writer.get(id);
 			   }
-		   }catch(Exception e) {
-			   System.err.println("Error on server at jvnLockRead():" + e) ;
-				e.printStackTrace();
+			   objectUpdate = writerJvnServer.jvnInvalidateWriterForReader(writerId);
+                           
+			   writer.clear();
+			  // readers.put(writerId, writerJvnServer);
 		   }
+		   readers.put(joi, js);
+	   }catch(Exception e) {
+		   System.err.println("Error on coordinator at jvnLockRead():" + e) ;
+			e.printStackTrace();
 	   }
-    
-    return result;
+	   System.out.println("writer :" + writer.toString());
+	   System.out.println("readers :" + readers.toString());
+	   return objectUpdate;
    }
-       }
-   /*
 
   /**
   * Get a Write lock on a JVN object managed by a given JVN server 
@@ -175,74 +140,37 @@ private Triplet writer;
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-       
-     Serializable result=null;
-       for(Triplet triplet : listObjLocalServer){
-           result = triplet.getJvnObject().jvnGetObjectState();
-           
-          if(triplet.getJvnObject().jvnGetObjectId()==joi && triplet.getJvnRemoteServer().equals(js)){
-            //change d'etat dans le coord
-          triplet.getJvnObject().setEtatVerrou(JvnObjectImpl.States.W);
-            return result;
-        }
-/*           
-            //case 7
-if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
-            if (triplet.getJvnObject().getEtatVerrou().equals(States.W)) {
-            triplet.getJvnRemoteServer().jvnInvalidateWriter(joi);
-            //change le nouveau server local qui va ecrire
-            triplet.setJvnRemoteServer(js);
-            
-            return result;     
-            }
-        }
-
-            //case 8
-if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServer().equals(js))){
-            if (triplet.getJvnObject().getEtatVerrou().equals(States.R)) {
-            triplet.getJvnRemoteServer().jvnInvalidateReader(joi);
-            triplet.getJvnObject().setEtatVerrou(States.W);
-            //change le nouveau server local qui va ecrire
-            triplet.setJvnRemoteServer(js);
-            return result;     
-            }   
- }
-
-    */   }
-       
-       
-       
-    return null;
-       
-   }
-	/*   Serializable result = null;
-	   for (Triplet triplet : listObjLocalServer) {
-		   try {
-			   if(triplet.getJvnObject().jvnGetObjectId() == joi && triplet.getJvnRemoteServer().equals(js)) {
-				   if(this.writer == null) {
-					   result = triplet.getJvnObject().jvnGetObjectState();
-					   if(!this.reader.isEmpty()) {
-						   for(Triplet t:this.reader) {
-							   t.getJvnRemoteServer().jvnInvalidateReader(t.getJvnObject().jvnGetObjectId());
-							   this.reader.remove(t);
-						   }
-					   }
-				   }else {
-					   result = this.writer.getJvnRemoteServer().jvnInvalidateWriter(this.writer.getJvnObject().jvnGetObjectId());
-				   }
-				   this.writer = triplet;
-				   
+	   System.out.println(joi + " do jvnLockWrite");
+	   try {
+		   if(!writer.isEmpty()) {
+			   int writerId = 0;
+			   JvnRemoteServer writerJvnServer = null;
+			   for(int id:writer.keySet()) {
+				   writerId = id;
+				   writerJvnServer = writer.get(id);
 			   }
-		   }catch(Exception e) {
-			   System.err.println("Error on server at jvnLockRead():" + e) ;
-				e.printStackTrace();
+			   objectUpdate = writerJvnServer.jvnInvalidateWriter(writerId);
+			   writer.clear();
 		   }
+		   if(writer.isEmpty() && !readers.isEmpty()) {
+			   JvnRemoteServer readerJvnServer = null;
+			   for(int id:readers.keySet()) {
+				   readerJvnServer = readers.get(id);
+				   readerJvnServer.jvnInvalidateReader(id);
+			   }
+			   readers.clear();
+		   }
+		   writer.put(joi, js);
+		   
+	   }catch(Exception e) {
+		   System.err.println("Error on server at jvnLockWrite():" + e) ;
+			e.printStackTrace();
 	   }
-    
-    return result;
+//	   System.out.println("writer :" + writer.toString());
+//	   System.out.println("readers :" + readers.toString());
+    return objectUpdate;
    }
-*/
-   
+
 	/**
 	* A JVN server terminates
 	* @param js  : the remote reference of the server
@@ -250,11 +178,7 @@ if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServ
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-    	for(Triplet t:this.listObjLocalServer) {
-    		if(t.getJvnRemoteServer().equals(js)) {
-    			this.listObjLocalServer.remove(t);
-    		}
-    	}
+    	
     }
     
     
@@ -262,8 +186,7 @@ if ((triplet.getJvnObject().jvnGetObjectId()==joi) && !(triplet.getJvnRemoteServ
     	JvnRemoteCoord h_stub;
 		try {
 			h_stub = new JvnCoordImpl();
-			// Registry registry= LocateRegistry.getRegistry();
-                        Registry registry= LocateRegistry.getRegistry(40000);
+			 Registry registry= LocateRegistry.getRegistry();
 			 registry.rebind("Coord", h_stub);
 			 System.out.println ("Server ready");
 		} catch (Exception e)  {
