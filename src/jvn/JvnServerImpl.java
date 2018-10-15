@@ -125,12 +125,11 @@ public class JvnServerImpl
           	JvnObject object = null;
             try {
             	object =  jrc.jvnLookupObject(jon, js);
-//            	if(object != null) {
-//            		JvnObject newJvnObj = new JvnObjectImpl(jrc.jvnGetObjectId(), object.jvnGetObjectState());
-//                	jrc.jvnRegisterObject(jon, newJvnObj, js);
-//                	mapJvnObject.put(newJvnObj.jvnGetObjectId(), newJvnObj);
-//                	object = newJvnObj;
-//            	}
+            	if(object != null) {
+                	JvnObject newJvnObj = new JvnObjectImpl(object.jvnGetObjectId(), object.jvnGetObjectState());
+                	mapJvnObject.put(newJvnObj.jvnGetObjectId(), newJvnObj);
+                	object = newJvnObj;
+            	}
             	
             	
             } catch (RemoteException ex) {
@@ -153,13 +152,12 @@ public class JvnServerImpl
 	**/
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
-	   Serializable result;
+	   Serializable result = null;
             try {
                 result = jrc.jvnLockRead(joi, js);
                 if(result == null) {
-                	result = mapJvnObject.get(joi).jvnGetObjectState();
+             	   result = mapJvnObject.get(joi).jvnGetObjectState();   
                 }
-                
             } catch (RemoteException ex) {
                 Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
         		return null;
@@ -175,13 +173,12 @@ public class JvnServerImpl
 	**/
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
-	   Serializable result;
+	   Serializable result = null;
 	   try {
-           result = jrc.jvnLockWrite(joi, js);
+           result = jrc.jvnLockWrite(joi, js);  
            if(result == null) {
-           	result = mapJvnObject.get(joi).jvnGetObjectState();
+        	   result = mapJvnObject.get(joi).jvnGetObjectState();   
            }
-           
        } catch (RemoteException ex) {
            Logger.getLogger(JvnServerImpl.class.getName()).log(Level.SEVERE, null, ex);
            return null;

@@ -22,11 +22,10 @@ public class JvnCoordImpl
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
 	private int id;
-	private HashMap<String, HashSet<JvnObject>> objectNames;
-	private HashMap<Integer, JvnRemoteServer> jvnObjects;
-	private HashMap<Integer, JvnRemoteServer> readers;
+	private HashMap<String, JvnObject> objectNames;
+	private HashMap<Integer, HashSet<JvnRemoteServer>> jvnObjects;
+	private HashMap<Integer, HashSet<JvnRemoteServer>> readers;
 	private HashMap<Integer, JvnRemoteServer> writer;
-	private Serializable objectUpdate;
 
 
 
@@ -35,11 +34,10 @@ public class JvnCoordImpl
   * @throws JvnException
   **/
 	private JvnCoordImpl() throws Exception {
-		objectNames = new HashMap<String, HashSet<JvnObject>>();
-		jvnObjects = new HashMap<Integer, JvnRemoteServer>();
-		readers = new HashMap<Integer, JvnRemoteServer>();
+		objectNames = new HashMap<String, JvnObject>();
+		jvnObjects = new HashMap<Integer, HashSet<JvnRemoteServer>>();
+		readers = new HashMap<Integer, HashSet<JvnRemoteServer>>();
 		writer = new HashMap<Integer, JvnRemoteServer>();
-		objectUpdate = null;
 	}
 
   /**
@@ -62,14 +60,16 @@ public class JvnCoordImpl
   **/
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-	  if(objectNames.containsKey(jon)) {
-		  HashSet<JvnObject> objs = objectNames.get(jon);
-		  if(objs == null) {
-			  objs = new HashSet<JvnObject>();
-		  }
-		  objs.add(jo);
+	  if(!objectNames.containsKey(jon)) {
+		  objectNames.put(jon, jo);
+		  jvnObjects.put(jo.jvnGetObjectId(), new HashSet<JvnRemoteServer>());
+		  jvnObjects.get(jo.jvnGetObjectId()).add(js);
+		  readers.put(jo.jvnGetObjectId(), new HashSet<JvnRemoteServer>());
+		  writer.put(jo.jvnGetObjectId(), js);
+	  }else {
+		  throw new JvnException("Error registering object");
 	  }
-      jvnObjects.put(jo.jvnGetObjectId(), js);
+      
   }
   
   /**
@@ -85,13 +85,8 @@ public class JvnCoordImpl
 	  
 	  if(!objectNames.isEmpty()) {
 		  if(objectNames.containsKey(jon)) {
-			  for(JvnObject o:objectNames.get(jon)) {
-				  for(int id:jvnObjects.keySet()) {
-					  if(jvnObjects.get(id) == js) {
-						  object = o;
-					  }
-				  }
-			  }
+			  object = objectNames.get(jon);
+			  jvnObjects.get(object.jvnGetObjectId()).add(js);
 		  }
 	  }
 	  return object;
@@ -106,27 +101,20 @@ public class JvnCoordImpl
   **/
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-   
-	   System.out.println(joi + " do jvnLockReaad");
+  
+	   Serializable objectUpdate = null;
 	   try {
-		   if(!writer.isEmpty()) {
-			   int writerId = 0;
-			   JvnRemoteServer writerJvnServer = null;
-			   for(int id:writer.keySet()) {
-				   writerId = id;
-				   writerJvnServer = writer.get(id);
-			   }
-			   objectUpdate = writerJvnServer.jvnInvalidateWriterForReader(writerId);
-			   writer.clear();
-			   readers.put(writerId, writerJvnServer);
+		   if(writer.get(joi) != null ) {			 			  
+			   JvnRemoteServer writerJvnServer = writer.get(joi);
+			   objectUpdate = writerJvnServer.jvnInvalidateWriterForReader(joi);
+			   writer.put(joi, null);
+			   readers.get(joi).add(writerJvnServer);
 		   }
-		   readers.put(joi, js);
+		   readers.get(joi).add(js);
 	   }catch(Exception e) {
 		   System.err.println("Error on coordinator at jvnLockRead():" + e) ;
 			e.printStackTrace();
 	   }
-	   System.out.println("writer :" + writer.toString());
-	   System.out.println("readers :" + readers.toString());
 	   return objectUpdate;
    }
 
@@ -139,25 +127,21 @@ public class JvnCoordImpl
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-	   System.out.println(joi + " do jvnLockWrite");
+	   Serializable objectUpdate = null;
 	   try {
-		   if(!writer.isEmpty()) {
-			   int writerId = 0;
-			   JvnRemoteServer writerJvnServer = null;
-			   for(int id:writer.keySet()) {
-				   writerId = id;
-				   writerJvnServer = writer.get(id);
+		   if(writer.containsKey(joi)) {
+			   if(writer.get(joi) != null) {
+				   JvnRemoteServer writerJvnServer = writer.get(joi);
+				   objectUpdate = writerJvnServer.jvnInvalidateWriter(joi);
+				   writer.put(joi, null);
+			   }else {
+				   if(!(readers.get(joi).isEmpty())) {
+					   for(JvnRemoteServer s:readers.get(joi)) {
+						   s.jvnInvalidateReader(joi); 
+					   }
+					   readers.get(joi).clear();
+				   }
 			   }
-			   objectUpdate = writerJvnServer.jvnInvalidateWriter(writerId);
-			   writer.clear();
-		   }
-		   if(writer.isEmpty() && !readers.isEmpty()) {
-			   JvnRemoteServer readerJvnServer = null;
-			   for(int id:readers.keySet()) {
-				   readerJvnServer = readers.get(id);
-				   readerJvnServer.jvnInvalidateReader(id);
-			   }
-			   readers.clear();
 		   }
 		   writer.put(joi, js);
 		   
@@ -165,8 +149,6 @@ public class JvnCoordImpl
 		   System.err.println("Error on server at jvnLockWrite():" + e) ;
 			e.printStackTrace();
 	   }
-//	   System.out.println("writer :" + writer.toString());
-//	   System.out.println("readers :" + readers.toString());
     return objectUpdate;
    }
 
@@ -178,6 +160,28 @@ public class JvnCoordImpl
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
     	
+////    	remove js with his jvnObjects from HashMap jvnObjects and objectNames
+//    	if(jvnObjects.containsValue(js)) {
+//    		for(int id:jvnObjects.keySet()) {
+//    			if(jvnObjects.get(id).equals(js)) {
+//    				for(String name:objectNames.keySet()) {
+//    					HashSet<JvnObject> setObjects = objectNames.get(name);
+//    						for(JvnObject obj:setObjects) {
+//    							if(obj.jvnGetObjectId() == id) {
+//    								setObjects.remove(obj);
+//    							}
+//    						}
+//    				}
+//    			}
+//    			jvnObjects.remove(id);
+//    			if (readers.containsKey(id)) {
+//					readers.remove(id);
+//				}
+//    			if(writer.containsKey(id)) {
+//    				writer.remove(id);
+//    			}
+//    		}
+//    	}
     }
     
     

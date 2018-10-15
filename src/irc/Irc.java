@@ -13,6 +13,7 @@ import java.awt.event.*;
 
 import jvn.*;
 import java.io.*;
+import java.util.Scanner;
 
 
 public class Irc {
@@ -98,7 +99,18 @@ public class Irc {
 		
 		// invoke the method
 		String s = ((Sentence)(irc.sentence.jvnGetObjectState())).read();
-		
+//		Scanner sc= new Scanner(System.in);
+//                String endReader="";
+//                
+//                while(!endReader.equals("q")){
+//                    
+//                    System.out.println("Avant UnLock - Read:(q)");
+//                    endReader=sc.nextLine();
+//                    
+//                }
+                
+                
+                
 		// unlock the object
 		irc.sentence.jvnUnLock();
 		
@@ -131,15 +143,30 @@ public class Irc {
         	
     // lock the object in write mode
 		irc.sentence.jvnLockWrite();
-		
+		Thread.sleep(5000);
 		// invoke the method
 		((Sentence)(irc.sentence.jvnGetObjectState())).write(s);
-		
+                
+//                Scanner sc= new Scanner(System.in);
+//                String endWriter="";
+//                
+//                while(!endWriter.equals("q")){
+//                    
+//                    System.out.println("Avant UnLock - Write:(q)");
+//                    endWriter=sc.nextLine();
+//                    
+//                }
+                
+                
+            
 		// unlock the object
 		irc.sentence.jvnUnLock();
 	 } catch (JvnException je) {
 		   System.out.println("IRC problem  : " + je.getMessage());
-	 }
+	 } catch (InterruptedException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	}
 	}
 }
 
